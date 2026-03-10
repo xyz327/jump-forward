@@ -10,5 +10,6 @@ export {
     ConnectionInfo,
     ForwardConfig,
     JumpHostConfig,
-    LogEntry
+    LogEntry,
+    UpdateInfo
 } from "./models.js";

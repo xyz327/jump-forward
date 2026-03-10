@@ -12,7 +12,7 @@ import NotificationCenter from './components/NotificationCenter';
 import { Toaster, toast } from 'sonner';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Events } from '@wailsio/runtime';
+import { Events, Browser } from '@wailsio/runtime';
 import { AppLogo } from './components/AppLogo';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
@@ -68,8 +68,10 @@ function App() {
   const [jumpHostFilter, setJumpHostFilter] = useState<string[]>([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
-  const addNotification = (event: any) => {
+  const addNotification = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     // Wails 3 event data can be in event.data or event.Data depending on emitter
     const rawData = event?.data || event?.Data || event;
     console.log("Raw event received:", event);
@@ -114,9 +116,53 @@ function App() {
   };
 
   useEffect(() => {
+    const init = async () => {
+      await fetchForwards();
+      await fetchJumpHosts();
+      try {
+        const version = await AppService.GetAppVersion();
+        setAppVersion(version);
+        // Silent check for updates on startup
+        handleCheckUpdate(true);
+      } catch (err) {
+        console.error("Failed to get app version:", err);
+      }
+    };
+    init();
     const unsubscribe = Events.On("notification", addNotification);
     return () => unsubscribe();
   }, []);
+
+  const handleCheckUpdate = async (silent = false) => {
+    if (isCheckingUpdate) return;
+    setIsCheckingUpdate(true);
+    try {
+      const info = await AppService.CheckForUpdates();
+      if (info && info.hasUpdate) {
+        toast.info(t('notifications.newVersion', { version: info.latestVersion }), {
+          description: info.releaseNotes || t('notifications.viewRelease'),
+          className: 'toast-long',
+          action: {
+            label: t('notifications.viewRelease'),
+            onClick: () => {
+              // Open browser using Wails 3 Browser.OpenURL
+              Browser.OpenURL(info.releaseUrl);
+            }
+          },
+          duration: 10000,
+        });
+      } else if (!silent) {
+        toast.success(t('notifications.upToDate'));
+      }
+    } catch (err) {
+      if (!silent) {
+        console.error("Update check failed:", err);
+        toast.error(t('notifications.updateFailed'), { description: String(err) });
+      }
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   const handleExport = async (password: string) => {
       try {
@@ -163,9 +209,6 @@ function App() {
   };
 
   useEffect(() => {
-    fetchForwards();
-    fetchJumpHosts();
-    
     const interval = setInterval(() => {
         fetchForwards();
     }, 2000);
@@ -331,6 +374,22 @@ function App() {
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-4">
+            {sidebarOpen && (
+                <div className="px-3 py-2 space-y-2">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        <span>Version</span>
+                        <span>{appVersion || 'v1.0.0'}</span>
+                    </div>
+                    <button 
+                        onClick={() => handleCheckUpdate()}
+                        disabled={isCheckingUpdate}
+                        className="w-full flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg transition-all text-xs font-medium disabled:opacity-50"
+                    >
+                        <RefreshCw className={cn("w-3.5 h-3.5", isCheckingUpdate && "animate-spin")} />
+                        {isCheckingUpdate ? t('common.checkingUpdate') : t('common.checkUpdate')}
+                    </button>
+                </div>
+            )}
             <button 
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="w-full flex items-center justify-center py-2 text-slate-500 hover:text-white transition-colors"
@@ -812,7 +871,7 @@ function App() {
           />
       )}
 
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster position="top-right" richColors closeButton duration={5000} />
     </div>
   );
 }

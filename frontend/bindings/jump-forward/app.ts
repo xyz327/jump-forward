@@ -17,6 +17,12 @@ export function AddJumpHost(config: $models.JumpHostConfig): $CancellablePromise
     return $Call.ByID(3121460106, config);
 }
 
+export function CheckForUpdates(): $CancellablePromise<$models.UpdateInfo | null> {
+    return $Call.ByID(2675659504).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
 export function DeleteForward(id: string): $CancellablePromise<void> {
     return $Call.ByID(2424831583, id);
 }
@@ -29,21 +35,25 @@ export function ExportConfig(password: string): $CancellablePromise<void> {
     return $Call.ByID(2222068969, password);
 }
 
+export function GetAppVersion(): $CancellablePromise<string> {
+    return $Call.ByID(1780012486);
+}
+
 export function GetForwards(): $CancellablePromise<$models.ForwardConfig[]> {
     return $Call.ByID(2892671581).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
 export function GetJumpHosts(): $CancellablePromise<$models.JumpHostConfig[]> {
     return $Call.ByID(3360602722).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
 export function GetLogs(forwardID: string): $CancellablePromise<$models.LogEntry[]> {
     return $Call.ByID(1743981476, forwardID).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
@@ -75,9 +85,11 @@ export function UpdateJumpHost(config: $models.JumpHostConfig): $CancellableProm
 }
 
 // Private type creation functions
-const $$createType0 = $models.ForwardConfig.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.JumpHostConfig.createFrom;
+const $$createType0 = $models.UpdateInfo.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.ForwardConfig.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.LogEntry.createFrom;
+const $$createType4 = $models.JumpHostConfig.createFrom;
 const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.LogEntry.createFrom;
+const $$createType7 = $Create.Array($$createType6);

@@ -29,6 +29,8 @@
     "info": "信息",
     "warning": "警告",
     "activeConnections": "活动连接",
+    "checkUpdate": "检查更新",
+    "checkingUpdate": "正在检查更新...",
     "export": "导出配置",
     "import": "导入配置",
     "notifications": "通知",
@@ -86,7 +88,11 @@
     "jumpHostDeletedMsg": "跳板机已移除",
     "deletionFailed": "删除失败",
     "forwardUpdated": "转发已更新",
-    "forwardUpdatedMsg": "转发规则 {{name}} 已更新"
+    "forwardUpdatedMsg": "转发规则 {{name}} 已更新",
+    "newVersion": "发现新版本: {{version}}",
+    "upToDate": "当前已是最新版本",
+    "updateFailed": "检查更新失败",
+    "viewRelease": "查看发布说明"
   },
   "confirm": {
     "deleteTitle": "删除 {{type}}",

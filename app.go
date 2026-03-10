@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"sort"
 	"sync"
@@ -14,6 +15,14 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/crypto/ssh"
 )
+
+type UpdateInfo struct {
+	LatestVersion  string `json:"latestVersion"`
+	CurrentVersion string `json:"currentVersion"`
+	HasUpdate      bool   `json:"hasUpdate"`
+	ReleaseURL     string `json:"releaseUrl"`
+	ReleaseNotes   string `json:"releaseNotes"`
+}
 
 type ForwardConfig struct {
 	ID          string           `json:"id"`
@@ -97,6 +106,43 @@ func (a *App) save() {
 // Start is called when the application starts
 func (a *App) Start(ctx context.Context) {
 	a.ctx = ctx
+}
+
+func (a *App) GetAppVersion() string {
+	return AppVersion
+}
+
+func (a *App) CheckForUpdates() (*UpdateInfo, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get("https://api.github.com/repos/xyz327/jump-forward/releases/latest")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to check for updates: %s", resp.Status)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+		Body    string `json:"body"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return nil, err
+	}
+
+	hasUpdate := release.TagName != AppVersion
+
+	return &UpdateInfo{
+		LatestVersion:  release.TagName,
+		CurrentVersion: AppVersion,
+		HasUpdate:      hasUpdate,
+		ReleaseURL:     release.HTMLURL,
+		ReleaseNotes:   release.Body,
+	}, nil
 }
 
 func (a *App) GetForwards() []ForwardConfig {

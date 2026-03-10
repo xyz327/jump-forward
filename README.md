@@ -14,6 +14,7 @@ Jump Forward is a modern, cross-platform SSH port forwarding manager built with 
 
 - **🛡️ Secure Tunneling**: Manage multiple SSH port forwarding rules effortlessly.
 - **🏗️ Jump Host Support**: Built-in support for bastion hosts with both **Password** and **SSH Key** authentication.
+- **🔄 Smart Updates**: Automatic version checking via GitHub Releases with in-app notifications.
 - **📊 Real-time Monitoring**:
   - Live connection status (Running, Stopped, Error).
   - **Active connection tracking** showing client IP and connection time directly on each card.

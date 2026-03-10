@@ -15,6 +15,14 @@ export interface ConnectionInfo {
   startTime: number;
 }
 
+export interface UpdateInfo {
+  latestVersion: string;
+  currentVersion: string;
+  hasUpdate: boolean;
+  releaseUrl: string;
+  releaseNotes: string;
+}
+
 export interface JumpHostConfig {
   id: string;
   name: string;

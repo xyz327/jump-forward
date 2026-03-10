@@ -29,6 +29,8 @@
     "info": "Info",
     "warning": "Warning",
     "activeConnections": "Active Connections",
+    "checkUpdate": "Check for Updates",
+    "checkingUpdate": "Checking for updates...",
     "export": "Export Config",
     "import": "Import Config",
     "notifications": "Notifications",
@@ -86,7 +88,11 @@
     "jumpHostDeletedMsg": "Jump host has been removed",
     "deletionFailed": "Deletion Failed",
     "forwardUpdated": "Forward Updated",
-    "forwardUpdatedMsg": "Forwarding rule {{name}} has been updated"
+    "forwardUpdatedMsg": "Forwarding rule {{name}} has been updated",
+    "newVersion": "New version available: {{version}}",
+    "upToDate": "You are on the latest version",
+    "updateFailed": "Failed to check for updates",
+    "viewRelease": "View Release"
   },
   "confirm": {
     "deleteTitle": "Delete {{type}}",

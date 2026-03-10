@@ -10,6 +10,8 @@ import (
 //go:embed frontend/dist
 var assets embed.FS
 
+const AppVersion = "0.0.1"
+
 func main() {
 	app := application.New(application.Options{
 		Name:        "Jump Forward",
