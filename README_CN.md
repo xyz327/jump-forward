@@ -10,6 +10,14 @@ Jump Forward 是一款基于 **Go** 和 **Wails v3** 开发的现代化、跨平
 
 ![界面截图](docs/img/main1.png)
 
+## ⚡ 快速安装
+
+通过一行命令即可安装最新版本 (macOS)：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
+```
+
 ## ✨ 功能特性
 
 - **🛡️ 安全隧道管理**：轻松管理多个 SSH 端口转发规则。
@@ -71,14 +79,6 @@ Jump Forward 是一款基于 **Go** 和 **Wails v3** 开发的现代化、跨平
 > ```bash
 > xattr -cr /Applications/Jump\ Forward.app
 > ```
-
-### 一键安装脚本
-
-您也可以使用我们的安装脚本快速安装最新版本：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
-```
 
 ## 🛠️ 技术栈
 

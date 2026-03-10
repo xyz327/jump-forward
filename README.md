@@ -10,6 +10,14 @@ Jump Forward is a modern, cross-platform SSH port forwarding manager built with 
 
 ![Main Screenshot](docs/img/main1.png)
 
+## ⚡ Quick Install
+
+Install the latest version with a single command (macOS):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
+```
+
 ## ✨ Features
 
 - **🛡️ Secure Tunneling**: Manage multiple SSH port forwarding rules effortlessly.
@@ -71,14 +79,6 @@ Jump Forward is a modern, cross-platform SSH port forwarding manager built with 
 > ```bash
 > xattr -cr /Applications/Jump\ Forward.app
 > ```
-
-### One-line Installation
-
-You can also install the latest version quickly using our install script:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
-```
 
 ## 🛠️ Built With
 
