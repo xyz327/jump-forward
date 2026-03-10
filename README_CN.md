@@ -67,6 +67,19 @@ Jump Forward 是一款基于 **Go** 和 **Wails v3** 开发的现代化、跨平
    ```
    打包结果将生成在 `bin/jump-forward.dmg`。
 
+> **注意**：由于应用未进行 Apple 开发者签名，首次打开可能会提示“无法验证开发者”。请在 **系统设置 > 隐私与安全性** 中点击“仍要打开”，或在终端运行以下命令移除隔离属性：
+> ```bash
+> xattr -cr /Applications/Jump\ Forward.app
+> ```
+
+### 一键安装脚本
+
+您也可以使用我们的安装脚本快速安装最新版本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
+```
+
 ## 🛠️ 技术栈
 
 - **后端**: [Go](https://golang.org/), [Wails v3](https://wails.io/)

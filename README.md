@@ -67,6 +67,19 @@ Jump Forward is a modern, cross-platform SSH port forwarding manager built with 
    ```
    The output will be in `bin/jump-forward.dmg`.
 
+> **Note**: Since the app is not signed with an Apple Developer ID, you may need to allow it in **System Settings > Privacy & Security** or run:
+> ```bash
+> xattr -cr /Applications/Jump\ Forward.app
+> ```
+
+### One-line Installation
+
+You can also install the latest version quickly using our install script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash
+```
+
 ## 🛠️ Built With
 
 - **Backend**: [Go](https://golang.org/), [Wails v3](https://wails.io/)
