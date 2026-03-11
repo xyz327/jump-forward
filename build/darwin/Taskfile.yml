@@ -149,6 +149,26 @@ tasks:
     cmds:
       - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}" "universal"
 
+  package:all:dmg:
+    summary: Packages both amd64 and arm64 binaries into separate `.dmg` files
+    cmds:
+      # Build and package for amd64
+      - task: build
+        vars: { ARCH: amd64, OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" }
+      - cp "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}"
+      - task: create:app:bundle
+      - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}" "amd64"
+      
+      # Build and package for arm64
+      - task: build
+        vars: { ARCH: arm64, OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-arm64" }
+      - cp "{{.BIN_DIR}}/{{.APP_NAME}}-arm64" "{{.BIN_DIR}}/{{.APP_NAME}}"
+      - task: create:app:bundle
+      - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}" "arm64"
+      
+      # Clean up temporary binaries
+      - rm -f "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-arm64" "{{.BIN_DIR}}/{{.APP_NAME}}"
+
 
   create:app:bundle:
     summary: Creates an `.app` bundle

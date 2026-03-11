@@ -34,6 +34,11 @@ tasks:
     cmds:
       - task: "{{OS}}:package:universal:dmg"
 
+  package:all:dmg:
+    summary: Packages both amd64 and arm64 binaries into separate `.dmg` files
+    cmds:
+      - task: "{{OS}}:package:all:dmg"
+
   run:
     summary: Runs the application
     cmds:
