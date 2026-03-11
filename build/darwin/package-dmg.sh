@@ -3,9 +3,19 @@ set -e
 
 APP_NAME=$1
 BIN_DIR=$2
-DMG_NAME="${APP_NAME}.dmg"
+ARCH=$3
+
+if [ -z "$ARCH" ]; then
+    ARCH=$(uname -m)
+    # Map arm64 to arm64 and x86_64 to amd64 for consistency
+    if [ "$ARCH" == "x86_64" ]; then
+        ARCH="amd64"
+    fi
+fi
+
+DMG_NAME="${APP_NAME}-${ARCH}.dmg"
 DMG_PATH="${BIN_DIR}/${DMG_NAME}"
-STAGING_DIR="${BIN_DIR}/dmg_staging"
+STAGING_DIR="${BIN_DIR}/dmg_staging_${ARCH}"
 
 # Clean up previous staging
 rm -rf "${STAGING_DIR}"

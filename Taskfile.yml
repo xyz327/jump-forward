@@ -29,6 +29,11 @@ tasks:
     cmds:
       - task: "{{OS}}:package:dmg"
 
+  package:universal:dmg:
+    summary: Packages a production build of the application into a universal `.dmg` file
+    cmds:
+      - task: "{{OS}}:package:universal:dmg"
+
   run:
     summary: Runs the application
     cmds:

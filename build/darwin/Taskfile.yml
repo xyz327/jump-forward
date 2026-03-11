@@ -133,7 +133,7 @@ tasks:
     deps:
       - task: package
     cmds:
-      - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}"
+      - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}" "{{.ARCH | default ARCH}}"
 
   package:universal:
     summary: Packages darwin universal binary (arm64 + amd64)
@@ -141,6 +141,13 @@ tasks:
       - task: build:universal
     cmds:
       - task: create:app:bundle
+
+  package:universal:dmg:
+    summary: Packages darwin universal binary into a `.dmg` file
+    deps:
+      - task: package:universal
+    cmds:
+      - ./build/darwin/package-dmg.sh "{{.APP_NAME}}" "{{.BIN_DIR}}" "universal"
 
 
   create:app:bundle:

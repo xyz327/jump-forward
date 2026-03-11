@@ -17,9 +17,29 @@ echo "🔍 Checking for latest release..."
 # Fetch the latest release data from GitHub API
 LATEST_RELEASE_DATA=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
 
+# Detect Architecture
+ARCH_TYPE=$(uname -m)
+if [ "$ARCH_TYPE" == "arm64" ]; then
+    ARCH_NAME="arm64"
+else
+    ARCH_NAME="amd64"
+fi
+
+echo "💻 Detected architecture: $ARCH_TYPE ($ARCH_NAME)"
+
 # Extract the browser_download_url for the .dmg file
-# This assumes there is only one .dmg file in the release assets, which is typical for macOS apps
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_DATA" | grep "browser_download_url" | grep ".dmg" | cut -d '"' -f 4 | head -n 1)
+# Try to find one with the matching architecture
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_DATA" | grep "browser_download_url" | grep ".dmg" | grep "$ARCH_NAME" | cut -d '"' -f 4 | head -n 1)
+
+# If not found, try universal
+if [ -z "$DOWNLOAD_URL" ]; then
+    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_DATA" | grep "browser_download_url" | grep ".dmg" | grep "universal" | cut -d '"' -f 4 | head -n 1)
+fi
+
+# Fallback to any DMG if no architecture-specific one is found
+if [ -z "$DOWNLOAD_URL" ]; then
+    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_DATA" | grep "browser_download_url" | grep ".dmg" | cut -d '"' -f 4 | head -n 1)
+fi
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "❌ Error: Could not find a DMG download URL for the latest release."
