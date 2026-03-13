@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -147,7 +149,7 @@ func (a *App) CheckForUpdates() (*UpdateInfo, error) {
 		return nil, err
 	}
 
-	hasUpdate := release.TagName != AppVersion
+	hasUpdate := isNewerVersion(release.TagName, AppVersion)
 
 	return &UpdateInfo{
 		LatestVersion:  release.TagName,
@@ -801,4 +803,33 @@ func (a *App) log(id, level, message string) {
 	// Emit event to frontend
 	app := application.Get()
 	app.Event.Emit("log:"+id, entry)
+}
+
+func isNewerVersion(remote, local string) bool {
+	remote = strings.TrimPrefix(remote, "v")
+	local = strings.TrimPrefix(local, "v")
+
+	remoteParts := strings.Split(remote, ".")
+	localParts := strings.Split(local, ".")
+
+	for i := 0; i < len(remoteParts) || i < len(localParts); i++ {
+		remoteVal := 0
+		if i < len(remoteParts) {
+			remoteVal, _ = strconv.Atoi(remoteParts[i])
+		}
+
+		localVal := 0
+		if i < len(localParts) {
+			localVal, _ = strconv.Atoi(localParts[i])
+		}
+
+		if remoteVal > localVal {
+			return true
+		}
+		if remoteVal < localVal {
+			return false
+		}
+	}
+
+	return false
 }

@@ -10,7 +10,7 @@ import (
 //go:embed frontend/dist
 var assets embed.FS
 
-const AppVersion = "0.0.1"
+const AppVersion = "0.2.0"
 
 func main() {
 	app := application.New(application.Options{
