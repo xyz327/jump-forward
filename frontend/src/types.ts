@@ -38,6 +38,7 @@ export interface JumpHostConfig {
   authType: string;
   password?: string;
   keyPath?: string;
+  timeout?: number;
 }
 
 export interface LogEntry {

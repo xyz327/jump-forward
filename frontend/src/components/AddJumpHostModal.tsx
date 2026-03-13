@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Server, Shield, User, Key, Lock } from 'lucide-react';
+import { X, Server, Shield, User, Key, Lock, Clock } from 'lucide-react';
 import type { JumpHostConfig } from '../types';
 import * as AppService from '../../bindings/jump-forward/app';
 import { toast } from 'sonner';
@@ -26,6 +26,7 @@ export default function AddJumpHostModal({ editConfig, onClose, onSuccess }: Pro
     const [authType, setAuthType] = useState<'password' | 'key'>((editConfig?.authType as 'password' | 'key') || 'password');
     const [password, setPassword] = useState(editConfig?.password || '');
     const [keyPath, setKeyPath] = useState(editConfig?.keyPath || '');
+    const [timeout, setTimeoutVal] = useState(editConfig?.timeout?.toString() || '60');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,6 +42,7 @@ export default function AddJumpHostModal({ editConfig, onClose, onSuccess }: Pro
                 authType,
                 password: authType === 'password' ? password : undefined,
                 keyPath: authType === 'key' ? keyPath : undefined,
+                timeout: parseInt(timeout),
             };
 
             if (editConfig?.id) {
@@ -179,6 +181,22 @@ export default function AddJumpHostModal({ editConfig, onClose, onSuccess }: Pro
                                 <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
                         )}
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">{t('common.timeout')}</label>
+                        <div className="relative">
+                            <input 
+                                type="number" 
+                                value={timeout} 
+                                onChange={e => setTimeoutVal(e.target.value)} 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                                placeholder="60"
+                                required 
+                                min="1"
+                            />
+                            <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        </div>
                     </div>
 
                     <div className="pt-4 flex gap-3">

@@ -142,6 +142,11 @@ export class JumpHostConfig {
     "password": string;
     "keyPath": string;
 
+    /**
+     * Timeout in seconds
+     */
+    "timeout": number;
+
     /** Creates a new JumpHostConfig instance. */
     constructor($$source: Partial<JumpHostConfig> = {}) {
         if (!("id" in $$source)) {
@@ -167,6 +172,9 @@ export class JumpHostConfig {
         }
         if (!("keyPath" in $$source)) {
             this["keyPath"] = "";
+        }
+        if (!("timeout" in $$source)) {
+            this["timeout"] = 0;
         }
 
         Object.assign(this, $$source);

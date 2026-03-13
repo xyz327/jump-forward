@@ -23,7 +23,7 @@ interface ForwardCardProps {
     fwd: ForwardConfig;
     jumpHosts: JumpHostConfig[];
     failedForwards: Record<string, number>;
-    startingForwards: Set<string>;
+    startingForwards: Record<string, { startTime: number, timeout: number }>;
     handleStartForward: (id: string) => void;
     handleStopForward: (id: string) => void;
     setEditingForward: (fwd: ForwardConfig) => void;
@@ -64,6 +64,29 @@ function ForwardCard({
     const [isExpanded, setIsExpanded] = useState(false);
     const jh = jumpHosts.find(j => j.id === fwd.jumpHostId);
     const failureTime = failedForwards[fwd.id];
+    const startingInfo = startingForwards[fwd.id];
+
+    // Calculate countdown progress for starting
+    const [startProgress, setStartProgress] = useState(100);
+    useEffect(() => {
+        if (!startingInfo) {
+            return;
+        }
+        
+        // Initial set
+        const update = () => {
+            const elapsed = (Date.now() - startingInfo.startTime) / 1000;
+            const remaining = Math.max(0, startingInfo.timeout - elapsed);
+            setStartProgress((remaining / startingInfo.timeout) * 100);
+        };
+        update();
+
+        const timer = setInterval(update, 100);
+        return () => {
+            clearInterval(timer);
+            setStartProgress(100);
+        };
+    }, [startingInfo]);
 
     return (
         <div 
@@ -72,7 +95,7 @@ function ForwardCard({
                 "bg-white rounded-xl border p-4 hover:shadow-md transition-all group relative overflow-hidden",
                 isSelected ? "border-blue-500 bg-blue-50/10 ring-1 ring-blue-500/20" : "",
                 failureTime ? "border-rose-500 shadow-lg shadow-rose-500/10 scale-[1.02]" : 
-                startingForwards.has(fwd.id) ? "border-blue-400 shadow-lg shadow-blue-400/20 ring-1 ring-blue-400/50" :
+                startingInfo ? "border-blue-400 shadow-lg shadow-blue-400/20 ring-1 ring-blue-400/50" :
                 fwd.status === 'running' ? "border-emerald-500 shadow-lg shadow-emerald-500/10" :
                 !isSelected && "border-slate-200 hover:border-blue-300"
             )}
@@ -97,11 +120,19 @@ function ForwardCard({
             )}
 
             {/* Loading shimmer effect */}
-            {startingForwards.has(fwd.id) && (
+            {startingInfo && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/40 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
             )}
 
-            {/* Countdown Progress Bar */}
+            {/* Countdown Progress Bar for Startup */}
+            {startingInfo && (
+                <div 
+                    className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-100 ease-linear"
+                    style={{ width: `${startProgress}%` }}
+                />
+            )}
+
+            {/* Countdown Progress Bar for Failure */}
             {failureTime !== undefined && (
                 <div 
                     className="absolute bottom-0 left-0 h-1 bg-rose-500 transition-all duration-100 ease-linear"
@@ -136,7 +167,7 @@ function ForwardCard({
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
                     <div className="flex gap-0.5">
-                        {startingForwards.has(fwd.id) ? (
+                        {startingInfo ? (
                             <button 
                                 onClick={() => handleStopForward(fwd.id)} 
                                 className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors animate-pulse" 
@@ -161,11 +192,11 @@ function ForwardCard({
                             onClick={() => setEditingForward(fwd)} 
                             className={cn(
                                 "p-1.5 rounded-lg transition-colors",
-                                fwd.status === 'running' || startingForwards.has(fwd.id)
+                                fwd.status === 'running' || startingInfo
                                     ? "text-slate-200 cursor-not-allowed" 
                                     : "text-slate-400 hover:text-blue-500 hover:bg-blue-50"
                             )}
-                            disabled={fwd.status === 'running' || startingForwards.has(fwd.id)}
+                            disabled={fwd.status === 'running' || !!startingInfo}
                             title={t('common.edit')}
                         >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -248,7 +279,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [failedForwards, setFailedForwards] = useState<Record<string, number>>({}); // id -> countdown
   const [failedJumpHosts, setFailedJumpHosts] = useState<Record<string, number>>({}); // id -> countdown
-  const [startingForwards, setStartingForwards] = useState<Set<string>>(new Set());
+  const [startingForwards, setStartingForwards] = useState<Record<string, { startTime: number, timeout: number }>>({});
   const [jumpHostFilter, setJumpHostFilter] = useState<string[]>([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -307,16 +338,16 @@ function App() {
       try {
         switch (entry.type) {
           case 'error':
-            toast.error(entry.title, toastOptions);
+            toast.error(t(entry.title), toastOptions);
             break;
           case 'success':
-            toast.success(entry.title, toastOptions);
+            toast.success(t(entry.title), toastOptions);
             break;
           case 'warning':
-            toast.warning(entry.title, toastOptions);
+            toast.warning(t(entry.title), toastOptions);
             break;
           default:
-            toast.info(entry.title, toastOptions);
+            toast.info(t(entry.title), toastOptions);
         }
       } catch (err) {
         console.error("Toast failed:", err);
@@ -471,7 +502,14 @@ function App() {
   }, []);
 
   const handleStartForward = async (id: string) => {
-    setStartingForwards(prev => new Set(prev).add(id));
+    const jhId = forwards.find(f => f.id === id)?.jumpHostId;
+    const jh = jumpHosts.find(j => j.id === jhId);
+    const timeout = jh?.timeout || 60;
+
+    setStartingForwards(prev => ({ 
+        ...prev, 
+        [id]: { startTime: Date.now(), timeout } 
+    }));
     try {
         await AppService.StartForward(id);
         fetchForwards();
@@ -481,8 +519,8 @@ function App() {
         fetchForwards();
     } finally {
         setStartingForwards(prev => {
-            const next = new Set(prev);
-            next.delete(id);
+            const next = { ...prev };
+            delete next[id];
             return next;
         });
     }
@@ -491,6 +529,11 @@ function App() {
   const handleStopForward = async (id: string) => {
     try {
         await AppService.StopForward(id);
+        setStartingForwards(prev => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+        });
         fetchForwards();
     } catch (err) {
         console.error("Stop failed", err);

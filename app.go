@@ -56,6 +56,7 @@ type JumpHostConfig struct {
 	AuthType string `json:"authType"` // "password", "key"
 	Password string `json:"password"`
 	KeyPath  string `json:"keyPath"`
+	Timeout  int    `json:"timeout"` // Timeout in seconds
 }
 
 type LogEntry struct {
@@ -220,12 +221,18 @@ func (a *App) StartForward(id string) error {
 	jh := *jumpHost
 	fwd := *config
 
-	// Create a cancellable context for startup
+	// Create a cancellable context for startup with timeout from jump host
 	parentCtx := a.ctx
 	if parentCtx == nil {
 		parentCtx = context.Background()
 	}
-	ctx, cancel := context.WithCancel(parentCtx)
+
+	timeout := time.Duration(jh.Timeout) * time.Second
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+
+	ctx, cancel := context.WithTimeout(parentCtx, timeout)
 	a.startCancels[id] = cancel
 	a.mu.Unlock()
 
@@ -239,11 +246,20 @@ func (a *App) StartForward(id string) error {
 	client, err := a.getSSHClientWithContext(ctx, &jh)
 	if err != nil {
 		if ctx.Err() != nil {
-			a.log(id, "info", "Startup cancelled")
+			if ctx.Err() == context.DeadlineExceeded {
+				a.log(id, "error", "Startup timed out")
+				a.notify("notifications.startupTimeout", fmt.Sprintf("Forwarding rule %s timed out during startup", fwd.Name), "error")
+				a.mu.Lock()
+				a.forwards[id].Status = "error"
+				a.mu.Unlock()
+				a.save()
+			} else {
+				a.log(id, "info", "Startup cancelled")
+			}
 			return nil
 		}
 		a.log(id, "error", fmt.Sprintf("Failed to connect to jump host: %v", err))
-		a.notify("Connection Error", fmt.Sprintf("Failed to connect to jump host %s for %s: %v", jh.Name, fwd.Name, err), "error")
+		a.notify("notifications.connError", fmt.Sprintf("Failed to connect to jump host %s for %s: %v", jh.Name, fwd.Name, err), "error")
 		a.mu.Lock()
 		a.forwards[id].Status = "error"
 		a.mu.Unlock()
@@ -253,7 +269,16 @@ func (a *App) StartForward(id string) error {
 
 	// Final check before listening
 	if ctx.Err() != nil {
-		a.log(id, "info", "Startup cancelled before listening")
+		if ctx.Err() == context.DeadlineExceeded {
+			a.log(id, "error", "Startup timed out before listening")
+			a.notify("notifications.startupTimeout", fmt.Sprintf("Forwarding rule %s timed out during startup", fwd.Name), "error")
+			a.mu.Lock()
+			a.forwards[id].Status = "error"
+			a.mu.Unlock()
+			a.save()
+		} else {
+			a.log(id, "info", "Startup cancelled before listening")
+		}
 		return nil
 	}
 
@@ -263,11 +288,20 @@ func (a *App) StartForward(id string) error {
 	listener, err := lc.Listen(ctx, "tcp", localAddr)
 	if err != nil {
 		if ctx.Err() != nil {
-			a.log(id, "info", "Startup cancelled while starting listener")
+			if ctx.Err() == context.DeadlineExceeded {
+				a.log(id, "error", "Startup timed out while starting listener")
+				a.notify("notifications.startupTimeout", fmt.Sprintf("Forwarding rule %s timed out during startup", fwd.Name), "error")
+				a.mu.Lock()
+				a.forwards[id].Status = "error"
+				a.mu.Unlock()
+				a.save()
+			} else {
+				a.log(id, "info", "Startup cancelled while starting listener")
+			}
 			return nil
 		}
 		a.log(id, "error", fmt.Sprintf("Failed to listen on %s: %v", localAddr, err))
-		a.notify("Port Error", fmt.Sprintf("Failed to listen on port %d for %s: %v", fwd.LocalPort, fwd.Name, err), "error")
+		a.notify("notifications.portError", fmt.Sprintf("Failed to listen on port %d for %s: %v", fwd.LocalPort, fwd.Name, err), "error")
 		a.mu.Lock()
 		a.forwards[id].Status = "error"
 		a.mu.Unlock()
@@ -288,7 +322,7 @@ func (a *App) StartForward(id string) error {
 	a.save()
 
 	a.log(id, "info", fmt.Sprintf("Started forwarding %s -> %s via %s", localAddr, fmt.Sprintf("%s:%d", fwd.RemoteHost, fwd.RemotePort), jh.Host))
-	a.notify("Forward Started", fmt.Sprintf("Forwarding %s -> %s started", fwd.Name, localAddr), "success")
+	a.notify("notifications.forwardStarted", fmt.Sprintf("Forwarding %s -> %s started", fwd.Name, localAddr), "success")
 
 	go a.handleForward(id, listener, client, fwd.RemoteHost, fwd.RemotePort)
 
@@ -316,7 +350,7 @@ func (a *App) StopForward(id string) error {
 
 	a.log(id, "info", "Stopped forwarding")
 	if ok {
-		a.notify("Forward Stopped", fmt.Sprintf("Port forward %s has been stopped", config.Name), "info")
+		a.notify("notifications.forwardStopped", fmt.Sprintf("Port forward %s has been stopped", config.Name), "info")
 	}
 	a.save()
 	return nil
@@ -337,7 +371,7 @@ func (a *App) UpdateForward(config ForwardConfig) error {
 	a.forwards[config.ID] = &c
 	a.mu.Unlock()
 	a.save()
-	a.notify("Forward Updated", fmt.Sprintf("Forwarding rule %s has been updated", config.Name), "success")
+	a.notify("notifications.forwardUpdated", fmt.Sprintf("Forwarding rule %s has been updated", config.Name), "success")
 	return nil
 }
 
@@ -381,7 +415,7 @@ func (a *App) AddJumpHost(config JumpHostConfig) string {
 	a.jumpHosts[config.ID] = &c
 	a.mu.Unlock()
 	a.save()
-	a.notify("Jump Host Added", fmt.Sprintf("Server %s (%s) has been added", config.Name, config.Host), "success")
+	a.notify("notifications.jumpHostAdded", fmt.Sprintf("Server %s (%s) has been added", config.Name, config.Host), "success")
 	return config.ID
 }
 
@@ -404,7 +438,7 @@ func (a *App) UpdateJumpHost(config JumpHostConfig) error {
 		client.Close()
 	}
 	a.save()
-	a.notify("Jump Host Deleted", "Jump host has been removed", "info")
+	a.notify("notifications.jumpHostDeleted", "Jump host has been removed", "info")
 	return nil
 }
 
@@ -415,7 +449,7 @@ func (a *App) DeleteJumpHost(id string) error {
 		if fwd.JumpHostID == id {
 			a.mu.Unlock()
 			err := fmt.Errorf("jump host is in use by forward: %s", fwd.Name)
-			a.notify("Deletion Failed", err.Error(), "error")
+			a.notify("notifications.deletionFailed", err.Error(), "error")
 			return err
 		}
 	}
@@ -486,7 +520,7 @@ func (a *App) DeleteGroup(id string) error {
 	delete(a.groups, id)
 	a.mu.Unlock()
 	a.save()
-	a.notify("Group Deleted", "Group deleted, forwards moved to Ungrouped", "info")
+	a.notify("notifications.groupDeleted", "Group deleted, forwards moved to Ungrouped", "info")
 	return nil
 }
 
@@ -501,7 +535,7 @@ func (a *App) BatchUpdateGroup(forwardIDs []string, groupID string) error {
 	}
 	a.mu.Unlock()
 	a.save()
-	a.notify("Batch Update", fmt.Sprintf("Moved %d forwards to group", count), "success")
+	a.notify("notifications.batchUpdate", fmt.Sprintf("Moved %d forwards to group", count), "success")
 	return nil
 }
 
@@ -587,7 +621,7 @@ func (a *App) ImportConfig(password string) error {
 	}
 	a.mu.Unlock()
 	a.save()
-	a.notify("Config Imported", fmt.Sprintf("Imported %d forwards, %d jump hosts and %d groups", len(data.Forwards), len(data.JumpHosts), len(data.Groups)), "success")
+	a.notify("notifications.configImported", fmt.Sprintf("Imported %d forwards, %d jump hosts and %d groups", len(data.Forwards), len(data.JumpHosts), len(data.Groups)), "success")
 	return nil
 }
 
@@ -630,11 +664,16 @@ func (a *App) getSSHClientWithContext(ctx context.Context, config *JumpHostConfi
 		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
 
+	timeout := time.Duration(config.Timeout) * time.Second
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+
 	sshConfig := &ssh.ClientConfig{
 		User:            config.User,
 		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Warn: Insecure
-		Timeout:         5 * time.Second,
+		Timeout:         timeout,
 	}
 
 	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
