@@ -27,12 +27,18 @@ type UpdateInfo struct {
 type ForwardConfig struct {
 	ID          string           `json:"id"`
 	Name        string           `json:"name"`
+	GroupID     string           `json:"groupId"` // ID of the group it belongs to
 	LocalPort   int              `json:"localPort"`
 	RemoteHost  string           `json:"remoteHost"`
 	RemotePort  int              `json:"remotePort"`
 	JumpHostID  string           `json:"jumpHostId"`
 	Status      string           `json:"status"`      // "running", "stopped", "error"
 	Connections []ConnectionInfo `json:"connections"` // Current active connections
+}
+
+type Group struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type ConnectionInfo struct {
@@ -70,6 +76,7 @@ type App struct {
 	ctx         context.Context
 	forwards    map[string]*ForwardConfig
 	jumpHosts   map[string]*JumpHostConfig
+	groups      map[string]*Group
 	listeners   map[string]net.Listener
 	logs        map[string][]LogEntry
 	activeConns map[string]map[string]*ConnectionInfo
@@ -85,6 +92,7 @@ func NewApp() *App {
 	return &App{
 		forwards:    data.Forwards,
 		jumpHosts:   data.JumpHosts,
+		groups:      data.Groups,
 		listeners:   make(map[string]net.Listener),
 		logs:        make(map[string][]LogEntry),
 		activeConns: make(map[string]map[string]*ConnectionInfo),
@@ -98,6 +106,7 @@ func (a *App) save() {
 	data := &PersistedData{
 		Forwards:  a.forwards,
 		JumpHosts: a.jumpHosts,
+		Groups:    a.groups,
 	}
 	a.mu.RUnlock()
 	a.storage.Save(data)
@@ -381,11 +390,83 @@ func (a *App) DeleteJumpHost(id string) error {
 	return nil
 }
 
+func (a *App) GetGroups() []Group {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	var list []Group
+	for _, g := range a.groups {
+		list = append(list, *g)
+	}
+
+	// Stable sort by Name
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Name < list[j].Name
+	})
+
+	return list
+}
+
+func (a *App) AddGroup(name string) string {
+	a.mu.Lock()
+	id := fmt.Sprintf("grp-%d", time.Now().UnixNano())
+	a.groups[id] = &Group{
+		ID:   id,
+		Name: name,
+	}
+	a.mu.Unlock()
+	a.save()
+	return id
+}
+
+func (a *App) UpdateGroup(id, name string) error {
+	a.mu.Lock()
+	if _, ok := a.groups[id]; !ok {
+		a.mu.Unlock()
+		return fmt.Errorf("group not found")
+	}
+	a.groups[id].Name = name
+	a.mu.Unlock()
+	a.save()
+	return nil
+}
+
+func (a *App) DeleteGroup(id string) error {
+	a.mu.Lock()
+	// Move all forwards in this group to ungrouped (empty GroupID)
+	for _, fwd := range a.forwards {
+		if fwd.GroupID == id {
+			fwd.GroupID = ""
+		}
+	}
+
+	delete(a.groups, id)
+	a.mu.Unlock()
+	a.save()
+	a.notify("Group Deleted", "Group deleted, forwards moved to Ungrouped", "info")
+	return nil
+}
+
+func (a *App) BatchUpdateGroup(forwardIDs []string, groupID string) error {
+	a.mu.Lock()
+	count := 0
+	for _, id := range forwardIDs {
+		if fwd, ok := a.forwards[id]; ok {
+			fwd.GroupID = groupID
+			count++
+		}
+	}
+	a.mu.Unlock()
+	a.save()
+	a.notify("Batch Update", fmt.Sprintf("Moved %d forwards to group", count), "success")
+	return nil
+}
+
 func (a *App) ExportConfig(password string) error {
 	a.mu.RLock()
 	data := &PersistedData{
 		Forwards:  a.forwards,
 		JumpHosts: a.jumpHosts,
+		Groups:    a.groups,
 	}
 	a.mu.RUnlock()
 
@@ -451,6 +532,9 @@ func (a *App) ImportConfig(password string) error {
 
 	a.mu.Lock()
 	// Merge logic: update or add
+	for id, g := range data.Groups {
+		a.groups[id] = g
+	}
 	for id, jh := range data.JumpHosts {
 		a.jumpHosts[id] = jh
 	}
@@ -459,7 +543,7 @@ func (a *App) ImportConfig(password string) error {
 	}
 	a.mu.Unlock()
 	a.save()
-	a.notify("Config Imported", fmt.Sprintf("Imported %d forwards and %d jump hosts", len(data.Forwards), len(data.JumpHosts)), "success")
+	a.notify("Config Imported", fmt.Sprintf("Imported %d forwards, %d jump hosts and %d groups", len(data.Forwards), len(data.JumpHosts), len(data.Groups)), "success")
 	return nil
 }
 

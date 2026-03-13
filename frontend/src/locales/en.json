@@ -33,10 +33,16 @@
     "checkingUpdate": "Checking for updates...",
     "export": "Export Config",
     "import": "Import Config",
+    "group": "Groups",
+    "ungrouped": "Ungrouped",
     "notifications": "Notifications",
     "noNotifications": "No notifications yet",
     "markAllAsRead": "Mark all as read",
-    "clearAll": "Clear All"
+    "clearAll": "Clear All",
+    "manageGroups": "Manage Groups",
+    "done": "Done",
+    "moveTo": "Move To",
+    "newGroup": "New Group"
   },
   "nav": {
     "forwards": "Port Forwards",
@@ -92,7 +98,9 @@
     "newVersion": "New version available: {{version}}",
     "upToDate": "You are on the latest version",
     "updateFailed": "Failed to check for updates",
-    "viewRelease": "View Release"
+    "viewRelease": "View Release",
+    "movedSuccess": "Successfully moved {{count}} items",
+    "groupAdded": "Group added successfully"
   },
   "confirm": {
     "deleteTitle": "Delete {{type}}",

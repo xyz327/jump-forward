@@ -60,7 +60,7 @@
   background: currentColor;
   opacity: 0.2;
   transform-origin: left;
-  animation: sonner-progress 5s linear forwards;
+  animation: sonner-progress 3s linear forwards;
 }
 
 [data-sonner-toast][data-type="success"]::after {
@@ -90,4 +90,10 @@
 @keyframes sonner-progress {
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

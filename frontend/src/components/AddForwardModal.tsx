@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Server, Globe, ArrowRight, Info, ChevronDown, Check } from 'lucide-react';
-import type { ForwardConfig, JumpHostConfig } from '../types';
+import { X, Server, Globe, ArrowRight, Info, ChevronDown, Check, Folder } from 'lucide-react';
+import type { ForwardConfig, JumpHostConfig, Group } from '../types';
 import * as AppService from '../../bindings/jump-forward/app';
+import * as Models from '../../bindings/jump-forward/models';
 import { toast } from 'sonner';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -14,20 +15,24 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 interface Props {
     editConfig?: ForwardConfig;
     jumpHosts: JumpHostConfig[];
+    groups: Group[];
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export default function AddForwardModal({ editConfig, jumpHosts, onClose, onSuccess }: Props) {
+export default function AddForwardModal({ editConfig, jumpHosts, groups, onClose, onSuccess }: Props) {
     const { t } = useTranslation();
     const [name, setName] = useState(editConfig?.name || '');
+    const [groupId, setGroupId] = useState(editConfig?.groupId || '');
     const [localPort, setLocalPort] = useState(editConfig?.localPort.toString() || '');
     const [remoteHost, setRemoteHost] = useState(editConfig?.remoteHost || '');
     const [remotePort, setRemotePort] = useState(editConfig?.remotePort.toString() || '');
     const [jumpHostId, setJumpHostId] = useState(editConfig?.jumpHostId || '');
     const [loading, setLoading] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const groupDropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -35,31 +40,37 @@ export default function AddForwardModal({ editConfig, jumpHosts, onClose, onSucc
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsDropdownOpen(false);
             }
+            if (groupDropdownRef.current && !groupDropdownRef.current.contains(event.target as Node)) {
+                setIsGroupDropdownOpen(false);
+            }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const selectedJumpHost = jumpHosts.find(jh => jh.id === jumpHostId);
+    const selectedGroup = groups.find(g => g.id === groupId);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const config: ForwardConfig = {
+            const config = new Models.ForwardConfig({
                 id: editConfig?.id || '',
                 name,
+                groupId,
                 localPort: parseInt(localPort),
                 remoteHost,
                 remotePort: parseInt(remotePort),
                 jumpHostId,
                 status: editConfig?.status || 'stopped',
-            };
+                connections: editConfig?.connections || [],
+            });
 
             if (editConfig?.id) {
-                await AppService.UpdateForward(config as any);
+                await AppService.UpdateForward(config);
             } else {
-                await AppService.AddForward(config as any);
+                await AppService.AddForward(config);
             }
             onSuccess();
         } catch (err) {
@@ -90,14 +101,74 @@ export default function AddForwardModal({ editConfig, jumpHosts, onClose, onSucc
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">{t('common.name')}</label>
-                        <input 
-                            type="text" 
-                            value={name} 
-                            onChange={e => setName(e.target.value)} 
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
-                            placeholder="e.g. Production Database"
-                            required 
-                        />
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={name} 
+                                onChange={e => setName(e.target.value)} 
+                                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                                placeholder="My Web Service"
+                                required 
+                            />
+                            <div className="relative min-w-[160px]" ref={groupDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
+                                    className={cn(
+                                        "w-full flex items-center justify-between bg-slate-50 border rounded-xl px-3 py-2.5 text-sm transition-all text-left",
+                                        isGroupDropdownOpen ? "ring-2 ring-blue-500/20 border-blue-500 bg-white" : "border-slate-200 hover:border-slate-300"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-2 truncate text-slate-600">
+                                        <Folder className={cn("w-4 h-4 shrink-0", selectedGroup ? "text-blue-500" : "text-slate-400")} />
+                                        <span className="truncate">
+                                            {selectedGroup ? selectedGroup.name : t('common.group') || 'Group'}
+                                        </span>
+                                    </div>
+                                    <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform duration-200", isGroupDropdownOpen && "rotate-180")} />
+                                </button>
+
+                                {isGroupDropdownOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-0.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setGroupId('');
+                                                    setIsGroupDropdownOpen(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-left text-sm",
+                                                    groupId === '' ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-600"
+                                                )}
+                                            >
+                                                <Folder className="w-3.5 h-3.5 opacity-40" />
+                                                <span className="flex-1 truncate">None</span>
+                                                {groupId === '' && <Check className="w-3.5 h-3.5" />}
+                                            </button>
+                                            {groups.map(g => (
+                                                <button
+                                                    key={g.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setGroupId(g.id);
+                                                        setIsGroupDropdownOpen(false);
+                                                    }}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-left text-sm",
+                                                        groupId === g.id ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-600"
+                                                    )}
+                                                >
+                                                    <Folder className="w-3.5 h-3.5 text-blue-400" />
+                                                    <span className="flex-1 truncate font-medium">{g.name}</span>
+                                                    {groupId === g.id && <Check className="w-3.5 h-3.5" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div>

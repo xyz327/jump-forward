@@ -13,8 +13,16 @@ export function AddForward(config: $models.ForwardConfig): $CancellablePromise<s
     return $Call.ByID(4132582929, config);
 }
 
+export function AddGroup(name: string): $CancellablePromise<string> {
+    return $Call.ByID(3799890143, name);
+}
+
 export function AddJumpHost(config: $models.JumpHostConfig): $CancellablePromise<string> {
     return $Call.ByID(3121460106, config);
+}
+
+export function BatchUpdateGroup(forwardIDs: string[], groupID: string): $CancellablePromise<void> {
+    return $Call.ByID(2172071189, forwardIDs, groupID);
 }
 
 export function CheckForUpdates(): $CancellablePromise<$models.UpdateInfo | null> {
@@ -25,6 +33,10 @@ export function CheckForUpdates(): $CancellablePromise<$models.UpdateInfo | null
 
 export function DeleteForward(id: string): $CancellablePromise<void> {
     return $Call.ByID(2424831583, id);
+}
+
+export function DeleteGroup(id: string): $CancellablePromise<void> {
+    return $Call.ByID(3779215765, id);
 }
 
 export function DeleteJumpHost(id: string): $CancellablePromise<void> {
@@ -45,15 +57,21 @@ export function GetForwards(): $CancellablePromise<$models.ForwardConfig[]> {
     });
 }
 
+export function GetGroups(): $CancellablePromise<$models.Group[]> {
+    return $Call.ByID(2476446367).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
 export function GetJumpHosts(): $CancellablePromise<$models.JumpHostConfig[]> {
     return $Call.ByID(3360602722).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
 export function GetLogs(forwardID: string): $CancellablePromise<$models.LogEntry[]> {
     return $Call.ByID(1743981476, forwardID).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -80,6 +98,10 @@ export function UpdateForward(config: $models.ForwardConfig): $CancellablePromis
     return $Call.ByID(514439393, config);
 }
 
+export function UpdateGroup(id: string, name: string): $CancellablePromise<void> {
+    return $Call.ByID(3141499567, id, name);
+}
+
 export function UpdateJumpHost(config: $models.JumpHostConfig): $CancellablePromise<void> {
     return $Call.ByID(3966924378, config);
 }
@@ -89,7 +111,9 @@ const $$createType0 = $models.UpdateInfo.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.ForwardConfig.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.JumpHostConfig.createFrom;
+const $$createType4 = $models.Group.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.LogEntry.createFrom;
+const $$createType6 = $models.JumpHostConfig.createFrom;
 const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.LogEntry.createFrom;
+const $$createType9 = $Create.Array($$createType8);

@@ -23,7 +23,7 @@ export default function AddJumpHostModal({ editConfig, onClose, onSuccess }: Pro
     const [host, setHost] = useState(editConfig?.host || '');
     const [port, setPort] = useState(editConfig?.port.toString() || '22');
     const [user, setUser] = useState(editConfig?.user || 'root');
-    const [authType, setAuthType] = useState<'password' | 'key'>(editConfig?.authType || 'password');
+    const [authType, setAuthType] = useState<'password' | 'key'>((editConfig?.authType as 'password' | 'key') || 'password');
     const [password, setPassword] = useState(editConfig?.password || '');
     const [keyPath, setKeyPath] = useState(editConfig?.keyPath || '');
     const [loading, setLoading] = useState(false);

@@ -17,6 +17,7 @@ type Storage interface {
 type PersistedData struct {
 	Forwards  map[string]*ForwardConfig  `json:"forwards"`
 	JumpHosts map[string]*JumpHostConfig `json:"jump_hosts"`
+	Groups    map[string]*Group          `json:"groups"`
 }
 
 // JSONStorage implements the Storage interface using a simple JSON file
@@ -47,6 +48,7 @@ func (s *JSONStorage) Load() (*PersistedData, error) {
 	data := &PersistedData{
 		Forwards:  make(map[string]*ForwardConfig),
 		JumpHosts: make(map[string]*JumpHostConfig),
+		Groups:    make(map[string]*Group),
 	}
 
 	file, err := os.Open(s.filePath)
@@ -68,6 +70,9 @@ func (s *JSONStorage) Load() (*PersistedData, error) {
 	}
 	if data.JumpHosts == nil {
 		data.JumpHosts = make(map[string]*JumpHostConfig)
+	}
+	if data.Groups == nil {
+		data.Groups = make(map[string]*Group)
 	}
 
 	// Reset status to stopped on load

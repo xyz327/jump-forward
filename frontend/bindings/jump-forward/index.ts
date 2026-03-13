@@ -9,6 +9,7 @@ export {
 export {
     ConnectionInfo,
     ForwardConfig,
+    Group,
     JumpHostConfig,
     LogEntry,
     UpdateInfo

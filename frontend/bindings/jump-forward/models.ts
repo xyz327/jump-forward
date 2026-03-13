@@ -37,6 +37,11 @@ export class ConnectionInfo {
 export class ForwardConfig {
     "id": string;
     "name": string;
+
+    /**
+     * ID of the group it belongs to
+     */
+    "groupId": string;
     "localPort": number;
     "remoteHost": string;
     "remotePort": number;
@@ -59,6 +64,9 @@ export class ForwardConfig {
         }
         if (!("name" in $$source)) {
             this["name"] = "";
+        }
+        if (!("groupId" in $$source)) {
+            this["groupId"] = "";
         }
         if (!("localPort" in $$source)) {
             this["localPort"] = 0;
@@ -86,12 +94,37 @@ export class ForwardConfig {
      * Creates a new ForwardConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): ForwardConfig {
-        const $$createField7_0 = $$createType1;
+        const $$createField8_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("connections" in $$parsedSource) {
-            $$parsedSource["connections"] = $$createField7_0($$parsedSource["connections"]);
+            $$parsedSource["connections"] = $$createField8_0($$parsedSource["connections"]);
         }
         return new ForwardConfig($$parsedSource as Partial<ForwardConfig>);
+    }
+}
+
+export class Group {
+    "id": string;
+    "name": string;
+
+    /** Creates a new Group instance. */
+    constructor($$source: Partial<Group> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Group instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Group {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Group($$parsedSource as Partial<Group>);
     }
 }
 

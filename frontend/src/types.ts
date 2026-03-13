@@ -1,12 +1,18 @@
 export interface ForwardConfig {
   id: string;
   name: string;
+  groupId: string;
   localPort: number;
   remoteHost: string;
   remotePort: number;
   jumpHostId: string;
-  status: "running" | "stopped" | "error";
+  status: string;
   connections?: ConnectionInfo[];
+}
+
+export interface Group {
+  id: string;
+  name: string;
 }
 
 export interface ConnectionInfo {
@@ -29,7 +35,7 @@ export interface JumpHostConfig {
   host: string;
   port: number;
   user: string;
-  authType: "password" | "key";
+  authType: string;
   password?: string;
   keyPath?: string;
 }
