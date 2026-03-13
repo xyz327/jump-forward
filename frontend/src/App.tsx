@@ -927,6 +927,36 @@ function App() {
                                         <div className="flex-1 h-px bg-slate-100 mx-2" />
                                         
                                         <div className="flex items-center gap-2">
+                                            {!isManageMode && groupForwards.length > 0 && (
+                                                <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-all mr-2">
+                                                    <button 
+                                                        onClick={() => {
+                                                            groupForwards.forEach(f => {
+                                                                if (f.status !== 'running' && !startingForwards[f.id]) {
+                                                                    handleStartForward(f.id);
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" 
+                                                        title={t('forwards.startGroup')}
+                                                    >
+                                                        <Play className="w-3.5 h-3.5 fill-current" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            groupForwards.forEach(f => {
+                                                                if (f.status === 'running' || startingForwards[f.id]) {
+                                                                    handleStopForward(f.id);
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
+                                                        title={t('forwards.stopGroup')}
+                                                    >
+                                                        <Square className="w-3.5 h-3.5 fill-current" />
+                                                    </button>
+                                                </div>
+                                            )}
                                             {isManageMode && (
                                                 <button
                                                     onClick={() => handleBatchMove(group.id)}
@@ -974,7 +1004,7 @@ function App() {
                         {/* Ungrouped Forwards */}
                         {filteredForwards.filter(f => !f.groupId || !groups.find(g => g.id === f.groupId)).length > 0 && (
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 px-1 text-slate-400">
+                                <div className="flex items-center gap-2 px-1 text-slate-400 group/header">
                                     <Folder className="w-4 h-4 opacity-40" />
                                     <h3 className="font-bold flex items-center gap-2">
                                         {t('common.ungrouped') || 'Ungrouped'}
@@ -983,6 +1013,39 @@ function App() {
                                         </span>
                                     </h3>
                                     <div className="flex-1 h-px bg-slate-100 ml-2" />
+                                    
+                                    {!isManageMode && (
+                                        <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-all mr-2">
+                                            <button 
+                                                onClick={() => {
+                                                    const ungrouped = filteredForwards.filter(f => !f.groupId || !groups.find(g => g.id === f.groupId));
+                                                    ungrouped.forEach(f => {
+                                                        if (f.status !== 'running' && !startingForwards[f.id]) {
+                                                            handleStartForward(f.id);
+                                                        }
+                                                    });
+                                                }}
+                                                className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" 
+                                                title={t('forwards.startGroup')}
+                                            >
+                                                <Play className="w-3.5 h-3.5 fill-current" />
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    const ungrouped = filteredForwards.filter(f => !f.groupId || !groups.find(g => g.id === f.groupId));
+                                                    ungrouped.forEach(f => {
+                                                        if (f.status === 'running' || startingForwards[f.id]) {
+                                                            handleStopForward(f.id);
+                                                        }
+                                                    });
+                                                }}
+                                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
+                                                title={t('forwards.stopGroup')}
+                                            >
+                                                <Square className="w-3.5 h-3.5 fill-current" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
                                     {filteredForwards.filter(f => !f.groupId || !groups.find(g => g.id === f.groupId)).map(fwd => (

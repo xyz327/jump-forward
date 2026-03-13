@@ -62,7 +62,9 @@
     "logs": "Logs",
     "localAddr": "Local Address",
     "remoteDest": "Remote Destination",
-    "jumpHost": "Jump Host"
+    "jumpHost": "Jump Host",
+    "startGroup": "Start All",
+    "stopGroup": "Stop All"
   },
   "jumpHosts": {
     "title": "Jump Hosts",

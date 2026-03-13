@@ -62,7 +62,9 @@
     "logs": "日志",
     "localAddr": "本地地址",
     "remoteDest": "远程目标",
-    "jumpHost": "跳板机"
+    "jumpHost": "跳板机",
+    "startGroup": "启动全部",
+    "stopGroup": "停止全部"
   },
   "jumpHosts": {
     "title": "跳板机管理",
