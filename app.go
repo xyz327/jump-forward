@@ -73,16 +73,17 @@ type Notification struct {
 }
 
 type App struct {
-	ctx         context.Context
-	forwards    map[string]*ForwardConfig
-	jumpHosts   map[string]*JumpHostConfig
-	groups      map[string]*Group
-	listeners   map[string]net.Listener
-	logs        map[string][]LogEntry
-	activeConns map[string]map[string]*ConnectionInfo
-	mu          sync.RWMutex
-	sshClients  map[string]*ssh.Client
-	storage     *JSONStorage
+	ctx          context.Context
+	forwards     map[string]*ForwardConfig
+	jumpHosts    map[string]*JumpHostConfig
+	groups       map[string]*Group
+	listeners    map[string]net.Listener
+	logs         map[string][]LogEntry
+	activeConns  map[string]map[string]*ConnectionInfo
+	mu           sync.RWMutex
+	sshClients   map[string]*ssh.Client
+	startCancels map[string]context.CancelFunc
+	storage      *JSONStorage
 }
 
 func NewApp() *App {
@@ -90,14 +91,16 @@ func NewApp() *App {
 	data, _ := storage.Load()
 
 	return &App{
-		forwards:    data.Forwards,
-		jumpHosts:   data.JumpHosts,
-		groups:      data.Groups,
-		listeners:   make(map[string]net.Listener),
-		logs:        make(map[string][]LogEntry),
-		activeConns: make(map[string]map[string]*ConnectionInfo),
-		sshClients:  make(map[string]*ssh.Client),
-		storage:     storage,
+		ctx:          context.Background(),
+		forwards:     data.Forwards,
+		jumpHosts:    data.JumpHosts,
+		groups:       data.Groups,
+		listeners:    make(map[string]net.Listener),
+		logs:         make(map[string][]LogEntry),
+		activeConns:  make(map[string]map[string]*ConnectionInfo),
+		sshClients:   make(map[string]*ssh.Client),
+		startCancels: make(map[string]context.CancelFunc),
+		storage:      storage,
 	}
 }
 
@@ -216,11 +219,29 @@ func (a *App) StartForward(id string) error {
 	// Make copies to use outside lock
 	jh := *jumpHost
 	fwd := *config
+
+	// Create a cancellable context for startup
+	parentCtx := a.ctx
+	if parentCtx == nil {
+		parentCtx = context.Background()
+	}
+	ctx, cancel := context.WithCancel(parentCtx)
+	a.startCancels[id] = cancel
 	a.mu.Unlock()
 
+	defer func() {
+		a.mu.Lock()
+		delete(a.startCancels, id)
+		a.mu.Unlock()
+	}()
+
 	// Connect to Jump Host
-	client, err := a.getSSHClient(&jh)
+	client, err := a.getSSHClientWithContext(ctx, &jh)
 	if err != nil {
+		if ctx.Err() != nil {
+			a.log(id, "info", "Startup cancelled")
+			return nil
+		}
 		a.log(id, "error", fmt.Sprintf("Failed to connect to jump host: %v", err))
 		a.notify("Connection Error", fmt.Sprintf("Failed to connect to jump host %s for %s: %v", jh.Name, fwd.Name, err), "error")
 		a.mu.Lock()
@@ -230,10 +251,21 @@ func (a *App) StartForward(id string) error {
 		return fmt.Errorf("failed to connect to jump host: %w", err)
 	}
 
+	// Final check before listening
+	if ctx.Err() != nil {
+		a.log(id, "info", "Startup cancelled before listening")
+		return nil
+	}
+
 	// Start local listener
 	localAddr := fmt.Sprintf("127.0.0.1:%d", fwd.LocalPort)
-	listener, err := net.Listen("tcp", localAddr)
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(ctx, "tcp", localAddr)
 	if err != nil {
+		if ctx.Err() != nil {
+			a.log(id, "info", "Startup cancelled while starting listener")
+			return nil
+		}
 		a.log(id, "error", fmt.Sprintf("Failed to listen on %s: %v", localAddr, err))
 		a.notify("Port Error", fmt.Sprintf("Failed to listen on port %d for %s: %v", fwd.LocalPort, fwd.Name, err), "error")
 		a.mu.Lock()
@@ -244,6 +276,12 @@ func (a *App) StartForward(id string) error {
 	}
 
 	a.mu.Lock()
+	// Check again if it was cancelled during Listen call
+	if _, ok := a.startCancels[id]; !ok {
+		a.mu.Unlock()
+		listener.Close()
+		return nil
+	}
 	a.listeners[id] = listener
 	a.forwards[id].Status = "running"
 	a.mu.Unlock()
@@ -259,6 +297,12 @@ func (a *App) StartForward(id string) error {
 
 func (a *App) StopForward(id string) error {
 	a.mu.Lock()
+	// Cancel startup if in progress
+	if cancel, ok := a.startCancels[id]; ok {
+		cancel()
+		delete(a.startCancels, id)
+	}
+
 	if listener, ok := a.listeners[id]; ok {
 		listener.Close()
 		delete(a.listeners, id)
@@ -555,7 +599,7 @@ func (a *App) GetLogs(forwardID string) []LogEntry {
 
 // Internal helpers
 
-func (a *App) getSSHClient(config *JumpHostConfig) (*ssh.Client, error) {
+func (a *App) getSSHClientWithContext(ctx context.Context, config *JumpHostConfig) (*ssh.Client, error) {
 	// Simple caching logic: check if client exists and is usable
 	a.mu.Lock()
 	if client, ok := a.sshClients[config.ID]; ok {
@@ -594,16 +638,43 @@ func (a *App) getSSHClient(config *JumpHostConfig) (*ssh.Client, error) {
 	}
 
 	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	client, err := ssh.Dial("tcp", addr, sshConfig)
+
+	// Use Dialer with context to make the initial TCP connection interruptible
+	dialer := net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
+
+	// Handle context cancellation during handshake
+	handshakeDone := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			conn.Close()
+		case <-handshakeDone:
+		}
+	}()
+
+	// Create SSH connection over the TCP connection
+	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, sshConfig)
+	close(handshakeDone)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	client := ssh.NewClient(sshConn, chans, reqs)
 
 	a.mu.Lock()
 	a.sshClients[config.ID] = client
 	a.mu.Unlock()
 
 	return client, nil
+}
+
+func (a *App) getSSHClient(config *JumpHostConfig) (*ssh.Client, error) {
+	return a.getSSHClientWithContext(context.Background(), config)
 }
 
 func (a *App) handleForward(id string, listener net.Listener, client *ssh.Client, remoteHost string, remotePort int) {
