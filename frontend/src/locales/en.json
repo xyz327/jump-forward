@@ -43,7 +43,10 @@
     "manageGroups": "Manage Groups",
     "done": "Done",
     "moveTo": "Move To",
-    "newGroup": "New Group"
+    "newGroup": "New Group",
+    "update": "Update",
+    "copy": "Copy",
+    "close": "Close"
   },
   "nav": {
     "forwards": "Port Forwards",
@@ -103,6 +106,11 @@
     "batchUpdate": "Batch Update",
     "groupDeleted": "Group Deleted",
     "newVersion": "New version available: {{version}}",
+    "updateAvailable": "Update Available",
+    "updateStarted": "Update Started",
+    "updateStartedMsg": "The update script is running. You may need to enter your password in a system prompt.",
+    "updateInstructions": "Since the application is not signed, automatic updates are not supported. Please run the following command in your terminal or click 'Update Now' to update:",
+    "updateNow": "Update Now",
     "upToDate": "You are on the latest version",
     "updateFailed": "Failed to check for updates",
     "viewRelease": "View Release",

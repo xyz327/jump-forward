@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -624,6 +625,77 @@ func (a *App) ImportConfig(password string) error {
 	a.mu.Unlock()
 	a.save()
 	a.notify("notifications.configImported", fmt.Sprintf("Imported %d forwards, %d jump hosts and %d groups", len(data.Forwards), len(data.JumpHosts), len(data.Groups)), "success")
+	return nil
+}
+
+func (a *App) PerformUpdate() error {
+	// Execute the install script directly
+	cmd := exec.Command("bash", "-c", "curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash")
+
+	// We don't want to wait for it because it might replace the running app
+	// But we should at least try to start it and see if it fails immediately
+	if err := cmd.Start(); err != nil {
+		a.notify("notifications.updateFailed", err.Error(), "error")
+		return err
+	}
+
+	// Notify user that update has started and they might need to provide password
+	a.notify("notifications.updateStarted", "Update script is running. Please check for any system password prompts.", "info")
+
+	// The script will replace the app in /Applications.
+	// The current process will continue to run until the user quits it.
+	return nil
+}
+
+func (a *App) PerformUpdateWithLogs() error {
+	// Execute the install script and stream output
+	cmd := exec.Command("bash", "-c", "curl -fsSL https://raw.githubusercontent.com/xyz327/jump-forward/main/scripts/install.sh | bash")
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	app := application.Get()
+
+	// Helper to stream output
+	streamOutput := func(r io.Reader, isError bool) {
+		buf := make([]byte, 1024)
+		for {
+			n, err := r.Read(buf)
+			if n > 0 {
+				msg := string(buf[:n])
+				fmt.Println(msg)
+				app.Event.Emit("update-log", map[string]interface{}{
+					"message": msg,
+					"isError": isError,
+				})
+			}
+			if err != nil {
+				break
+			}
+		}
+	}
+
+	go streamOutput(stdout, false)
+	go streamOutput(stderr, true)
+
+	go func() {
+		err := cmd.Wait()
+		app.Event.Emit("update-finished", map[string]interface{}{
+			"success": err == nil,
+			"error":   fmt.Sprintf("%v", err),
+		})
+	}()
+
 	return nil
 }
 

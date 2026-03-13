@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Terminal, Server, Play, Square, Trash2, Cpu, Globe, Key, Search, Menu, Edit2, Download, Upload, Copy, Languages, RefreshCw, ChevronDown, Check, Folder, ArrowRight, X as CloseIcon } from 'lucide-react';
 import type { ForwardConfig, JumpHostConfig, Notification, Group } from './types';
@@ -9,10 +9,11 @@ import GroupManagementModal from './components/GroupManagementModal';
 import LogViewer from './components/LogViewer';
 import PasswordModal from './components/PasswordModal';
 import ConfirmModal from './components/ConfirmModal';
+import UpdateHelpModal from './components/UpdateHelpModal';
 import { Toaster, toast } from 'sonner';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Events, Browser } from '@wailsio/runtime';
+import { Events } from '@wailsio/runtime';
 import { AppLogo } from './components/AppLogo';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
@@ -285,6 +286,8 @@ function App() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [showUpdateHelp, setShowUpdateHelp] = useState<string | null>(null); // releaseUrl
+  const initialized = useRef(false);
 
   const [isManageMode, setIsManageMode] = useState(false);
   const [selectedForwards, setSelectedForwards] = useState<Set<string>>(new Set());
@@ -356,6 +359,9 @@ function App() {
   };
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    
     const init = async () => {
       await fetchForwards();
       await fetchJumpHosts();
@@ -381,13 +387,12 @@ function App() {
       const info = await AppService.CheckForUpdates();
       if (info && info.hasUpdate) {
         toast.info(t('notifications.newVersion', { version: info.latestVersion }), {
-          description: info.releaseNotes || t('notifications.viewRelease'),
+          description: info.releaseNotes || t('notifications.updateAvailable'),
           className: 'toast-long',
           action: {
-            label: t('notifications.viewRelease'),
+            label: t('common.update'),
             onClick: () => {
-              // Open browser using Wails 3 Browser.OpenURL
-              Browser.OpenURL(info.releaseUrl);
+              setShowUpdateHelp(info.releaseUrl);
             }
           },
           duration: 10000,
@@ -1225,6 +1230,13 @@ function App() {
             confirmText={t('common.delete')}
             onClose={() => setConfirmDelete(null)}
             onConfirm={handleConfirmDelete}
+          />
+      )}
+
+      {showUpdateHelp && (
+          <UpdateHelpModal 
+            releaseUrl={showUpdateHelp}
+            onClose={() => setShowUpdateHelp(null)}
           />
       )}
 

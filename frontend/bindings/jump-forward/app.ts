@@ -79,6 +79,14 @@ export function ImportConfig(password: string): $CancellablePromise<void> {
     return $Call.ByID(3706958138, password);
 }
 
+export function PerformUpdate(): $CancellablePromise<void> {
+    return $Call.ByID(1736600371);
+}
+
+export function PerformUpdateWithLogs(): $CancellablePromise<void> {
+    return $Call.ByID(423979656);
+}
+
 /**
  * Start is called when the application starts
  */
